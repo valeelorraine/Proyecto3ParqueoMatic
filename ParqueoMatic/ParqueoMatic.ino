@@ -11,7 +11,6 @@ char dato;
 uint8_t posicion = 0;
 
 String recibido,dummy;
-String dato1,dato2,dato3,dato4;
 
 int datos[4];
 
@@ -69,6 +68,7 @@ void setup() {
   delay(100);
 
   server.on("/", leerHTML);
+  server.on("/rfsh", leerHTML);
   server.begin(); //iniciar el servidor
   Serial.println("se inicio el servidor");
   delay(100);
@@ -85,21 +85,9 @@ void loop() {
         fechas.remove(0);
         parqueo.remove(0);
         }
-    fechas.add(posicion);
+    fechas.add("MAYO");
     parqueo.add(recibido);
-    leerHTML();
-    /*
-    serializeJsonPretty(datosJson, Serial);
-    const char* dato10 = datosJson["parqueo"][0];
-    dummy = dato10;
     
-    for(int i=0; i<4;i++){
-      int index = dummy.indexOf(','); //mira el index del dato
-      datos[i]= dummy.substring(0,index).toInt(); //lo separa en una substring hasta ese index
-      dummy = dummy.substring(index + 1); //crea la nueva string en base a la anterior quitando el dato
-      Serial.println(datos[i]); //debugeo
-      }
-      */
     }
     else{
       guardarJson();
@@ -125,16 +113,6 @@ void paginaInicio2(void){ //enviar una pagina de inicio utilizando el SPIFF
 void leerHTML(void){
   File HTMLdin = SPIFFS.open("/indexvariable.html","r");
   String datosHTML = HTMLdin.readString();
-  /*datosHTML += "<tr>";
-  datosHTML += "<td>2</td>";
-  datosHTML += "<td>Abril 2020</td>";
-  datosHTML += "<td>2</td>";
-  datosHTML += "<td>2</td>";
-  datosHTML += "<td>2</td>";
-  datosHTML += "<td>2</td>";
-  datosHTML += "</tr>";
-  datosHTML += "</table>";
-  datosHTML += "</html>";*/
   
   for(int i=0; i<fechas.size();i++){
     datosHTML += "<tr align =\"center\" >\n"; //inicio de la fila
@@ -146,6 +124,7 @@ void leerHTML(void){
     datosHTML += "<td>"; //celda de fecha
     const char* dummyfecha = datosJson["fechas"][i];
     dummy = dummyfecha;
+    dummy = dummy.substring(0);
     datosHTML += dummy;
     datosHTML += "</td>\n";
     
@@ -170,7 +149,6 @@ void leerHTML(void){
 
   datosHTML += "</table>";
   datosHTML += "</html>";
-  //Serial.println(datosHTML);
   server.send(200,"text/html",datosHTML);
   HTMLdin.close();
   }
