@@ -3,6 +3,8 @@
 #include <WiFi.h>
 #include <SPIFFS.h>
 #include <WebServer.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
 
 //Variables para el WebServer
 const char* ssid = "ParqueoMatic";
@@ -14,6 +16,19 @@ String recibido,dummy;
 
 int datos[4];
 
+//variables para el timestamp
+const char* ssid2 = "CBV383Z2-1616-G";
+const char* password2 = "8da2b3806736a";
+
+//cleinte NTP para obtener el tiempo
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP);
+
+//para darle formato a las fechas
+String formattedDate;
+String dayStamp;
+String timeStamp;
+
 IPAddress ipLocal(192,168,1,1);
 IPAddress gateway(192,168,1,1);
 IPAddress subnet(255,255,255,0);
@@ -21,12 +36,15 @@ IPAddress subnet(255,255,255,0);
 WebServer server(80);
 
 StaticJsonDocument<1024> datosJson; //crear un documento para guardar los valores
+
 JsonArray fechas = datosJson.createNestedArray("fechas");
 JsonArray parqueo = datosJson.createNestedArray("parqueo");
 
 void setup() {
   Serial.begin(115200);
-
+  
+  WiFi.mode(WIFI_MODE_APSTA);
+  
   if(!SPIFFS.begin()){ //ver si se puede cargar las cosas con el SPIFF
       Serial.println("No se ha podido acceder a SPIFFS");
       return;
@@ -50,18 +68,20 @@ void setup() {
   archivoJSON.readBytes(buf.get(), datos);
   Serial.println(buf.get()); //ver si se cargo de forma correcta el archivo
   
-  StaticJsonDocument<1024> datosJson2;
-  deserializeJson(datosJson2,buf.get());
-
+  //StaticJsonDocument<1024> datosJson2;
+  deserializeJson(datosJson,buf.get());
+  
+  
   for(int i=0;i<5;i++){
     fechas.add(datosJson2["fechas"][i]);
     parqueo.add(datosJson2["parqueo"][i]);
     }
-    
+  
+   
   serializeJsonPretty(datosJson, Serial);
+  //cerrar el Json2
   archivoJSON.close(); //se cierra luego de abrir el archivo y modificarlo
   */
-  
   Serial.print("Configurando el access point ....."); //configuracion del accesspoint para enlazar la app
   WiFi.softAP(ssid,pass);
   WiFi.softAPConfig(ipLocal,gateway,subnet);
@@ -71,13 +91,25 @@ void setup() {
   server.on("/rfsh", leerHTML);
   server.begin(); //iniciar el servidor
   Serial.println("se inicio el servidor");
+  
+  WiFi.begin(ssid2,password2);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  timeClient.begin();
+  timeClient.setTimeOffset(-21600);
+  
   delay(100);
   
 }
 
 void loop() {
   server.handleClient();
+  
   if(Serial.available()){
+    upTime();
     posicion += 1;
     recibido = Serial.readStringUntil('\n');
     if(recibido != "a"){
@@ -85,7 +117,7 @@ void loop() {
         fechas.remove(0);
         parqueo.remove(0);
         }
-    fechas.add("MAYO");
+    fechas.add(dayStamp + "   " +timeStamp);
     parqueo.add(recibido);
     
     }
@@ -95,6 +127,21 @@ void loop() {
     }
     
 }
+
+void upTime(void){
+  
+  while(!timeClient.update()) {//Actualizar el tiempo actual
+    timeClient.forceUpdate();
+  }
+  //obtener la fecha
+  formattedDate = timeClient.getFormattedDate();
+
+  // Separar en fecha y hora
+  int splitT = formattedDate.indexOf("T");
+  dayStamp = formattedDate.substring(0, splitT);
+  timeStamp = formattedDate.substring(splitT+1, formattedDate.length()-1);
+
+  }
 
 void guardarJson(){
   //Usado para modificar el valor del JSON en el SPIFF
@@ -132,7 +179,7 @@ void leerHTML(void){
     dummy = dato10;
     
     for(int i=0; i<4;i++){
-      int index = dummy.indexOf(','); //mira el index del dato
+      int index = dummy.indexOf('X'); //mira el index del dato
       datos[i]= dummy.substring(0,index).toInt(); //lo separa en una substring hasta ese index
       dummy = dummy.substring(index + 1); //crea la nueva string en base a la anterior quitando el dato
       }
