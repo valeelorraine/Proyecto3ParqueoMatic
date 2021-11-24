@@ -11,6 +11,7 @@ const char* ssid = "ParqueoMatic";
 const char* pass = "12345678";
 char dato;
 uint8_t posicion = 0;
+uint8_t posicion2 = 0;
 
 bool upDisp = false;
 
@@ -26,7 +27,7 @@ const bool ocho[] =   {1,1,1,1,1,1,1};
 
 const uint8_t pines[] = {15,2,0,4,5,18,19};
 
-String recibido,dummy;
+String recibido,dummy,recibido2;
 
 int datos[4];
 
@@ -49,19 +50,19 @@ IPAddress subnet(255,255,255,0);
 
 WebServer server(80);
 
-StaticJsonDocument<1024> datosJson; //crear un documento para guardar los valores
+StaticJsonDocument<20000> datosJson; //crear un documento para guardar los valores
 
 JsonArray fechas = datosJson.createNestedArray("fechas");
 JsonArray parqueo = datosJson.createNestedArray("parqueo");
 
-StaticJsonDocument<1024> datosJson2; //crear un documento para guardar los valores
+StaticJsonDocument<20000> datosJson2; //crear un documento para guardar los valores
 
 JsonArray fechas2 = datosJson2.createNestedArray("fechas");
 JsonArray parqueo2 = datosJson2.createNestedArray("parqueo");
 
 void setup() {
   Serial.begin(115200);
-  //Serial2.begin(115200);
+  Serial2.begin(115200);
 
   for (int i = 0; i<7; i ++){
     pinMode(pines[i],OUTPUT);
@@ -74,39 +75,7 @@ void setup() {
       Serial.println("No se ha podido acceder a SPIFFS");
       return;
     }
-    
-  /*
-  File archivoJSON = SPIFFS.open("/datos.json","r");
-  if(!archivoJSON){
-    Serial.println("error leyendo el JSON");
-    return;
-    }  
 
-  size_t datos = archivoJSON.size();
-  if(datos > 1024){ //abrirlo y ver que no tenga un tamaño mayor al requerido
-    Serial.println("El archivo es demasiado grande");
-    return;
-    }
-
-  //creando un buffer para leer el archivo
-  std::unique_ptr<char[]>buf(new char[datos]);
-  archivoJSON.readBytes(buf.get(), datos);
-  Serial.println(buf.get()); //ver si se cargo de forma correcta el archivo
-  
-  //StaticJsonDocument<1024> datosJson2;
-  deserializeJson(datosJson,buf.get());
-  
-  
-  for(int i=0;i<5;i++){
-    fechas.add(datosJson2["fechas"][i]);
-    parqueo.add(datosJson2["parqueo"][i]);
-    }
-  
-   
-  serializeJsonPretty(datosJson, Serial);
-  //cerrar el Json2
-  archivoJSON.close(); //se cierra luego de abrir el archivo y modificarlo
-  */
   Serial.print("Configurando el access point ....."); //configuracion del accesspoint para enlazar la app
   WiFi.softAP(ssid,pass);
   WiFi.softAPConfig(ipLocal,gateway,subnet);
@@ -141,22 +110,32 @@ void loop() {
   if(Serial.available()){
     upDisp = true;
     upTime();
-    posicion += 1;
     recibido = Serial.readStringUntil('\n');
-    if(recibido != "a"){
-    if(fechas.size() > 5){
+    Serial.println("1 " + recibido);
+    
+    if(fechas.size() > 4){
         fechas.remove(0);
         parqueo.remove(0);
         }
+        
     fechas.add(dayStamp + "   " +timeStamp);
     parqueo.add(recibido);
-    fechas2.add(dayStamp + "   " +timeStamp);
-    parqueo2.add(recibido);
+        
     }
-    else{
-      guardarJson();
-      }
-
+    
+    if(Serial2.available()){
+    upDisp = true;
+    upTime();
+    recibido2 = Serial2.readStringUntil('\n');
+    Serial.println("2 " + recibido2);
+    
+    if(fechas2.size() > 4){
+        fechas2.remove(0);
+        parqueo2.remove(0);
+        }
+        
+    fechas2.add(dayStamp + "   " +timeStamp);
+    parqueo2.add(recibido2);
         
     }
     
@@ -164,7 +143,7 @@ void loop() {
 
 void displayUpdate(void){
   String dummy2;
-  int numDisp[4],numDisp2[4];
+  uint8_t numDisp[4],numDisp2[4];
   
   for(int i=0; i<fechas.size();i++){
     const char* datoDisp = datosJson["parqueo"][i];
@@ -187,7 +166,9 @@ void displayUpdate(void){
       dummy2 = dummy2.substring(indexDisp + 1); //crea la nueva string en base a la anterior quitando el dato
       }
     }
-   int DatoFinal = 8 - numDisp[0] - numDisp[1] - numDisp[2] - numDisp[3] - numDisp2[0] - numDisp2[1] - numDisp2[2] - numDisp2[3];
+   uint8_t DatoFinal = 8 - numDisp[0] - numDisp[1] - numDisp[2] - numDisp[3] - numDisp2[0] - numDisp2[1] - numDisp2[2] - numDisp2[3];
+   if(DatoFinal>8)DatoFinal = 0;
+   if(DatoFinal<0)DatoFinal = 0;
    Serial.println(DatoFinal);
 
    switch(DatoFinal){
@@ -312,7 +293,7 @@ void leerHTML(void){
   datosHTML += HTMLdin2.readString();
   HTMLdin2.close();
 
-  for(int i=0; i<fechas.size();i++){
+  for(int i=0; i<fechas2.size();i++){
     datosHTML += "<tr align =\"center\" >\n"; //inicio de la fila
     
     datosHTML += "<td>"; //celda de numero
@@ -348,5 +329,6 @@ void leerHTML(void){
   datosHTML += "</table>";
   datosHTML += "</html>";
   server.send(200,"text/html",datosHTML);
+  datosHTML = " ";
   
   }
