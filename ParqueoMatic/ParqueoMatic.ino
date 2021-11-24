@@ -12,6 +12,13 @@ const char* pass = "12345678";
 char dato;
 uint8_t posicion = 0;
 
+const bool cero[] =   {0,1,1,1,1,1,1};
+const bool uno[] =    {0,0,0,0,1,1,0};
+const bool dos[] =    {1,0,1,1,0,1,1};
+const bool tres[] =   {1,0,0,1,1,1,1};
+const bool cuatro[] = {1,1,0,0,1,1,0};
+const uint8_t pines[] = {15,2,0,4,5,18,19};
+
 String recibido,dummy;
 
 int datos[4];
@@ -42,6 +49,12 @@ JsonArray parqueo = datosJson.createNestedArray("parqueo");
 
 void setup() {
   Serial.begin(115200);
+  //Serial2.begin(115200);
+
+  for (int i = 0; i<7; i ++){
+    pinMode(pines[i],OUTPUT);
+    digitalWrite(pines[i],HIGH);
+    }
   
   WiFi.mode(WIFI_MODE_APSTA);
   
@@ -123,10 +136,59 @@ void loop() {
     }
     else{
       guardarJson();
-      }  
+      }
+
+    displayUpdate();
+        
     }
     
 }
+
+void displayUpdate(void){
+  String dummy2;
+  int numDisp[4];
+  
+  for(int i=0; i<fechas.size();i++){
+    const char* datoDisp = datosJson["parqueo"][i];
+    dummy2 = datoDisp;
+
+    for(int i=0; i<4;i++){
+      int indexDisp = dummy2.indexOf('X'); //mira el index del dato
+      numDisp[i]= dummy2.substring(0,indexDisp).toInt(); //lo separa en una substring hasta ese index
+      dummy2 = dummy2.substring(indexDisp + 1); //crea la nueva string en base a la anterior quitando el dato
+      }
+    }
+   int DatoFinal = 4 - numDisp[0] - numDisp[1] - numDisp[2] - numDisp[3];
+   Serial.println(DatoFinal);
+
+   switch(DatoFinal){
+    case 0:
+    for(int i=0;i<7;i++){
+      digitalWrite(pines[i],cero[i]);
+      }
+    break;
+    case 1:
+    for(int i=0;i<7;i++){
+      digitalWrite(pines[i],uno[i]);
+      }
+    break;
+    case 2:
+    for(int i=0;i<7;i++){
+      digitalWrite(pines[i],dos[i]);
+      }
+    break;
+    case 3:
+    for(int i=0;i<7;i++){
+      digitalWrite(pines[i],tres[i]);
+      }
+    break;
+    case 4:
+    for(int i=0;i<7;i++){
+      digitalWrite(pines[i],cuatro[i]);
+      }
+    break;
+    }
+  }
 
 void upTime(void){
   
