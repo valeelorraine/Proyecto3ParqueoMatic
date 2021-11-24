@@ -12,11 +12,18 @@ const char* pass = "12345678";
 char dato;
 uint8_t posicion = 0;
 
+bool upDisp = false;
+
 const bool cero[] =   {0,1,1,1,1,1,1};
 const bool uno[] =    {0,0,0,0,1,1,0};
 const bool dos[] =    {1,0,1,1,0,1,1};
 const bool tres[] =   {1,0,0,1,1,1,1};
 const bool cuatro[] = {1,1,0,0,1,1,0};
+const bool cinco[] =  {1,1,0,1,1,0,1};
+const bool seis[] =   {1,1,1,1,1,0,1};
+const bool siete[] =  {0,0,0,0,1,1,1};
+const bool ocho[] =   {1,1,1,1,1,1,1};
+
 const uint8_t pines[] = {15,2,0,4,5,18,19};
 
 String recibido,dummy;
@@ -46,6 +53,11 @@ StaticJsonDocument<1024> datosJson; //crear un documento para guardar los valore
 
 JsonArray fechas = datosJson.createNestedArray("fechas");
 JsonArray parqueo = datosJson.createNestedArray("parqueo");
+
+StaticJsonDocument<1024> datosJson2; //crear un documento para guardar los valores
+
+JsonArray fechas2 = datosJson2.createNestedArray("fechas");
+JsonArray parqueo2 = datosJson2.createNestedArray("parqueo");
 
 void setup() {
   Serial.begin(115200);
@@ -120,8 +132,14 @@ void setup() {
 
 void loop() {
   server.handleClient();
+
+  if(upDisp){
+    displayUpdate();
+    upDisp = false;
+    }
   
   if(Serial.available()){
+    upDisp = true;
     upTime();
     posicion += 1;
     recibido = Serial.readStringUntil('\n');
@@ -132,13 +150,13 @@ void loop() {
         }
     fechas.add(dayStamp + "   " +timeStamp);
     parqueo.add(recibido);
-    
+    fechas2.add(dayStamp + "   " +timeStamp);
+    parqueo2.add(recibido);
     }
     else{
       guardarJson();
       }
 
-    displayUpdate();
         
     }
     
@@ -146,7 +164,7 @@ void loop() {
 
 void displayUpdate(void){
   String dummy2;
-  int numDisp[4];
+  int numDisp[4],numDisp2[4];
   
   for(int i=0; i<fechas.size();i++){
     const char* datoDisp = datosJson["parqueo"][i];
@@ -158,7 +176,18 @@ void displayUpdate(void){
       dummy2 = dummy2.substring(indexDisp + 1); //crea la nueva string en base a la anterior quitando el dato
       }
     }
-   int DatoFinal = 4 - numDisp[0] - numDisp[1] - numDisp[2] - numDisp[3];
+
+  for(int i=0; i<fechas2.size();i++){
+    const char* datoDisp2 = datosJson2["parqueo"][i];
+    dummy2 = datoDisp2;
+
+    for(int i=0; i<4;i++){
+      int indexDisp = dummy2.indexOf('X'); //mira el index del dato
+      numDisp2[i]= dummy2.substring(0,indexDisp).toInt(); //lo separa en una substring hasta ese index
+      dummy2 = dummy2.substring(indexDisp + 1); //crea la nueva string en base a la anterior quitando el dato
+      }
+    }
+   int DatoFinal = 8 - numDisp[0] - numDisp[1] - numDisp[2] - numDisp[3] - numDisp2[0] - numDisp2[1] - numDisp2[2] - numDisp2[3];
    Serial.println(DatoFinal);
 
    switch(DatoFinal){
@@ -185,6 +214,26 @@ void displayUpdate(void){
     case 4:
     for(int i=0;i<7;i++){
       digitalWrite(pines[i],cuatro[i]);
+      }
+    break;
+    case 5:
+    for(int i=0;i<7;i++){
+      digitalWrite(pines[i],cinco[i]);
+      }
+    break;
+    case 6:
+    for(int i=0;i<7;i++){
+      digitalWrite(pines[i],seis[i]);
+      }
+    break;
+    case 7:
+    for(int i=0;i<7;i++){
+      digitalWrite(pines[i],siete[i]);
+      }
+    break;
+    case 8:
+    for(int i=0;i<7;i++){
+      digitalWrite(pines[i],ocho[i]);
       }
     break;
     }
@@ -222,6 +271,7 @@ void paginaInicio2(void){ //enviar una pagina de inicio utilizando el SPIFF
 void leerHTML(void){
   File HTMLdin = SPIFFS.open("/indexvariable.html","r");
   String datosHTML = HTMLdin.readString();
+  HTMLdin.close();
   
   for(int i=0; i<fechas.size();i++){
     datosHTML += "<tr align =\"center\" >\n"; //inicio de la fila
@@ -255,9 +305,48 @@ void leerHTML(void){
     
     datosHTML += "</tr>\n"; //din de la fila para la siguiente
     }
+    
+  datosHTML += "</table>";
+  
+  File HTMLdin2 = SPIFFS.open("/index2.html","r");
+  datosHTML += HTMLdin2.readString();
+  HTMLdin2.close();
 
+  for(int i=0; i<fechas.size();i++){
+    datosHTML += "<tr align =\"center\" >\n"; //inicio de la fila
+    
+    datosHTML += "<td>"; //celda de numero
+    datosHTML += (i);
+    datosHTML += "</td>\n";
+
+    datosHTML += "<td>"; //celda de fecha
+    const char* dummyfecha = datosJson2["fechas"][i];
+    dummy = dummyfecha;
+    dummy = dummy.substring(0);
+    datosHTML += dummy;
+    datosHTML += "</td>\n";
+    
+    const char* dato10 = datosJson2["parqueo"][i];
+    dummy = dato10;
+    
+    for(int i=0; i<4;i++){
+      int index = dummy.indexOf('X'); //mira el index del dato
+      datos[i]= dummy.substring(0,index).toInt(); //lo separa en una substring hasta ese index
+      dummy = dummy.substring(index + 1); //crea la nueva string en base a la anterior quitando el dato
+      }
+      
+    for(int i=0; i<4;i++){
+      datosHTML += "<td>"; //celda de numero
+      datosHTML += datos[i];
+      datosHTML += "</td>\n";
+      }
+    
+    
+    datosHTML += "</tr>\n"; //din de la fila para la siguiente
+    }
+  
   datosHTML += "</table>";
   datosHTML += "</html>";
   server.send(200,"text/html",datosHTML);
-  HTMLdin.close();
+  
   }
