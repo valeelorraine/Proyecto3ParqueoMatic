@@ -50,12 +50,12 @@ IPAddress subnet(255,255,255,0);
 
 WebServer server(80);
 
-StaticJsonDocument<20000> datosJson; //crear un documento para guardar los valores
+StaticJsonDocument<40000> datosJson; //crear un documento para guardar los valores
 
 JsonArray fechas = datosJson.createNestedArray("fechas");
 JsonArray parqueo = datosJson.createNestedArray("parqueo");
 
-StaticJsonDocument<20000> datosJson2; //crear un documento para guardar los valores
+StaticJsonDocument<40000> datosJson2; //crear un documento para guardar los valores
 
 JsonArray fechas2 = datosJson2.createNestedArray("fechas");
 JsonArray parqueo2 = datosJson2.createNestedArray("parqueo");
@@ -113,7 +113,7 @@ void loop() {
     recibido = Serial.readStringUntil('\n');
     Serial.println("1 " + recibido);
     
-    if(fechas.size() > 4){
+    if(fechas.size() > 5){
         fechas.remove(0);
         parqueo.remove(0);
         }
@@ -129,7 +129,7 @@ void loop() {
     recibido2 = Serial2.readStringUntil('\n');
     Serial.println("2 " + recibido2);
     
-    if(fechas2.size() > 4){
+    if(fechas2.size() > 5){
         fechas2.remove(0);
         parqueo2.remove(0);
         }
